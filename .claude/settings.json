@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install -r requirements.txt)",
+      "Bash(python run_scan.py:*)",
+      "Bash(python run_backtest.py:*)",
+      "Bash(python -m pytest:*)"
+    ]
+  }
+}
