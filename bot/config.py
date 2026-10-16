@@ -49,6 +49,14 @@ class StrategyConfig(_EnvMixin):
     rsi_long_max: float = 70.0
     rsi_short_min: float = 30.0
     rsi_short_max: float = 50.0
+    # Fair Value Gap (3-candle imbalance) filter
+    #   off     : not used
+    #   confirm : the EMA-cross signal also needs a same-direction FVG in the last fvg_lookback bars
+    #   retest  : no cross needed; in the EMA trend direction, enter when price pulls back
+    #             into a still-unused FVG and closes back outside it
+    fvg_mode: str = "off"
+    fvg_lookback: int = 20          # bars an FVG stays valid
+    fvg_min_atr: float = 0.2        # ignore gaps smaller than this many ATR
     # Volatility: ATR sizes the grid, take-profit and stop-loss
     atr_period: int = 14
     # Grid: extra orders added when price moves against the basket
@@ -70,6 +78,11 @@ class StrategyConfig(_EnvMixin):
             raise ValueError("base_lot and lot_multiplier must be > 0")
         if self.grid_step_atr <= 0 or self.tp_atr <= 0 or self.sl_atr < 0:
             raise ValueError("grid_step_atr and tp_atr must be > 0, sl_atr >= 0")
+        self.fvg_mode = self.fvg_mode.lower()
+        if self.fvg_mode not in ("off", "confirm", "retest"):
+            raise ValueError("fvg_mode must be off, confirm or retest")
+        if self.fvg_lookback < 1 or self.fvg_min_atr < 0:
+            raise ValueError("fvg_lookback must be >= 1 and fvg_min_atr >= 0")
 
     @property
     def warmup_bars(self) -> int:

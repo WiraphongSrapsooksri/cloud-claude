@@ -1,6 +1,9 @@
 """Strategy logic shared by the backtester and the live runner.
 
 Entry  : EMA fast crosses EMA slow, confirmed by RSI inside a band.
+         Optional FVG filter (``fvg_mode``): ``confirm`` also needs a recent
+         same-direction FVG; ``retest`` instead enters on a pullback into an
+         FVG in the EMA trend direction.
 Grid   : if price moves against the basket, add an order every
          ``grid_step_atr * ATR`` up to ``max_grid_levels`` extra orders.
 Exits  : the whole basket closes at
@@ -39,15 +42,26 @@ def cross(df: pd.DataFrame, i: int) -> int:
 
 def entry_signal(df: pd.DataFrame, i: int, cfg: StrategyConfig) -> int:
     """Signal on the close of bar ``i``: LONG, SHORT or 0."""
-    c = cross(df, i)
-    if c == 0:
-        return 0
     row = df.iloc[i]
     if pd.isna(row["rsi"]) or pd.isna(row["atr"]) or row["atr"] <= 0:
         return 0
+
+    if cfg.fvg_mode == "retest":
+        # Pullback into an FVG in the trend direction; RSI only blocks extremes.
+        if row["ema_fast"] > row["ema_slow"] and row["fvg_long_touch"] and row["rsi"] <= cfg.rsi_long_max:
+            return LONG
+        if row["ema_fast"] < row["ema_slow"] and row["fvg_short_touch"] and row["rsi"] >= cfg.rsi_short_min:
+            return SHORT
+        return 0
+
+    c = cross(df, i)
     if c == LONG and cfg.rsi_long_min <= row["rsi"] <= cfg.rsi_long_max:
+        if cfg.fvg_mode == "confirm" and not row["fvg_bull_recent"]:
+            return 0
         return LONG
     if c == SHORT and cfg.rsi_short_min <= row["rsi"] <= cfg.rsi_short_max:
+        if cfg.fvg_mode == "confirm" and not row["fvg_bear_recent"]:
+            return 0
         return SHORT
     return 0
 
