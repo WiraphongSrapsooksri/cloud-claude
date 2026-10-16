@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+data/
+state/
+logs/
+.pytest_cache/
+.senior-mode/.welcomed
